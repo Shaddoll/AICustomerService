@@ -181,6 +181,7 @@ app.get('/', function(req, res) {
 
 // sent sentiment analysis
 app.post('/sentiment', function(req, res) {
-  console.log(req);
-  console.log(res);
+  console.log(req.body);
+  res.send('Got it!');
+  io.emit(req.body.uid, textMessage(`${req.body.label}(${req.body.score})`));
 });
