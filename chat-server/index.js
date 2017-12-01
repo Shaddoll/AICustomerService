@@ -1,22 +1,6 @@
 'use strict';
 
 // libraries and imports
-const AWS = require('aws-sdk');
-AWS.config.update({
-  // accessKeyId: 'AKIAJOJQFSEGYR5TA6QQ',
-  // secretAccessKey: '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',
-  region: 'us-east-1',
-  credentials: new AWS.CognitoIdentityCredentials({
-      IdentityPoolId: 'us-east-1:6b8882b9-33c1-4885-aeb1-bf836cddb79f'
-      // IdentityPoolId: 'us-east-1:0644c03b-dc36-4e91-ae48-b2a2d71ffa3c'
-  })
-});
-const lexruntime = new AWS.LexRuntime();
-const s3 = new AWS.S3({
-  params: { Bucket: 'ai-customer-group6-conversations' },
-  accessKeyId: 'AKIAJOJQFSEGYR5TA6QQ',
-  secretAccessKey: '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'
-});
 const uuidv4 = require('uuid/v4');
 const path = require('path');
 const express = require('express');
@@ -29,6 +13,22 @@ const port = process.env.PORT || 3000;
 // application-specific variables
 const state = {};
 const sockets = {};
+
+// AWS config
+const AWS = require('aws-sdk');
+AWS.config.update({
+  region: 'us-east-1',
+  credentials: new AWS.CognitoIdentityCredentials({
+      // IdentityPoolId: 'us-east-1:0644c03b-dc36-4e91-ae48-b2a2d71ffa3c',
+      IdentityPoolId: 'us-east-1:6b8882b9-33c1-4885-aeb1-bf836cddb79f',
+  })
+});
+const s3 = new AWS.S3({
+  params: { Bucket: 'ai-customer-group6-conversations' },
+  accessKeyId: 'AKIAJOJQFSEGYR5TA6QQ',
+  secretAccessKey: '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'
+});
+const lexruntime = new AWS.LexRuntime();
 
 // helper function for initializing state
 const initState = function(userId) {
@@ -50,7 +50,6 @@ function pushMsg(userId, inputText) {
     botAlias: '$LATEST',
     botName: 'BookTrip',
   };
-
   lexruntime.postText(msg, function(err, data) {
     if (err) {
       console.log(err);
@@ -105,6 +104,7 @@ io.on('connection', function(socket) {
       // if a state object does not exist
       // for this user, create a new one
       if (!state[userId]) {
+        console.log(userId + ' logged in!');
         state[userId] = initState(userId);
         state[userId].name = user.name;
       }
@@ -166,7 +166,6 @@ io.on('connection', function(socket) {
     console.log(`socket ${socket.id} disconnected at ${new Date().toISOString()}`);
     if (sockets[socket.id]) delete sockets[socket.id];
   });
-
 });
 
 // middleware
@@ -185,7 +184,8 @@ app.get('/', function(req, res) {
 
 // sent sentiment analysis
 app.post('/sentiment', function(req, res) {
+  res.send('Gotcha!');
+  console.log('User sentiment received:');
   console.log(req.body);
-  res.send('Got it!');
   io.emit(req.body.uid, textMessage(`${req.body.label}(${req.body.score})`));
 });
