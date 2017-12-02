@@ -35,6 +35,7 @@ const initState = function(userId) {
   return {
     userId,
     name: '',
+    missedCount: 0,
     messages: [],
     sessionAttributes: {},
     conversationId: uuidv4() // auto-assign conversationId
@@ -59,7 +60,10 @@ function pushMsg(userId, inputText) {
       state[userId].sessionAttributes = data.sessionAttributes;
       state[userId].messages.push(data.message);
       io.emit(userId, textMessage(data.message));
+
+      // upload conversation to S3 if Fulfilled
       if (data.dialogState === 'Fulfilled') {
+        state[userId].missedCount = 0;
         console.log('Saving to S3...');
         s3.upload({
           Key: `${userId}.json`,
@@ -70,6 +74,16 @@ function pushMsg(userId, inputText) {
         },function (resp) {
           console.log(resp? 'Error' : 'Successfully uploaded messages to S3.');
         });
+      }
+
+      // count number of misunderstanding
+      if (data.message.slice(0, 5) === 'Sorry') {
+        ++state[userId].missedCount;
+        if (state[userId].missedCount > 3) {
+          io.emit(userId, textMessage(`I am not able to understand you ${state[userId].missedCount} times in a row. If you want to speak to a human agent, please call 911.`));
+        }
+      } else {
+        state[userId].missedCount = 0;
       }
     }
   });
